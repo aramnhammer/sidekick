@@ -16,6 +16,19 @@ package utils
 
 import "fmt"
 
+var FirewallsetupStage = CommandsStage{
+	SpinnerSuccessMessage: "Firewall setup successfully",	
+	SpinnerFailMessage: "Error setting up firewall",
+	Commands: []string{
+		"sudo apt install -y ufw",
+		"sudo ufw allow ssh",
+		"sudo ufw default deny incoming",
+		"sudo ufw default allow outgoing",
+		"sudo ufw allow 80/tcp",
+		"sudo ufw allow 443/tcp",
+	},
+}
+
 var UsersetupStage = CommandsStage{
 	SpinnerSuccessMessage: "New user created successfully",
 	SpinnerFailMessage:    "Error creating a new user for the machine",
@@ -59,6 +72,41 @@ var DockerStage = CommandsStage{
 		"sudo apt-get update -y",
 		"sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y",
 		"sudo usermod -aG docker sidekick",
+	},
+}
+
+
+var DockerFirewallConfigureStage = CommandsStage{
+	SpinnerSuccessMessage: "Docker settings for firewall setup successfully",	
+	SpinnerFailMessage: "Error setting up docker settings for firewall",
+	Commands: []string{
+		`cat > /etc/ufw/applications.d/docker <<EOF 
+		[Docker]
+		title=Docker
+		description=Docker container engine
+		ports-2375/tcp|2376/tcp
+		EOF
+		`,
+		`mkdir -p /et/docker`,
+		`cat > /etc/docker/daemon.json <<EOF
+		{
+			"iptables": true,
+			"ip-forward": true,
+			"ip-masq: true,
+			"userland-proxy": false
+		}
+		EOF
+		`,
+		`cat >> /etc/ufw/after.rules <<EOF
+
+		# Docker rules
+		*filter
+		:DOCKER-USER - [0:0]
+		:DOCKER - [0:0]
+		-A DOCKER-USER -j RETURN
+		COMMIT
+		EOF
+		`,
 	},
 }
 
